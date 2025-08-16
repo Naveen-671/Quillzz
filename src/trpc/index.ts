@@ -176,6 +176,7 @@ import { TRPCError } from '@trpc/server'
 import { db } from '@/db'
 import { z } from 'zod'
 import { INFINITE_QUERY_LIMIT } from '@/config/infinite-query'
+import { UploadStatus } from '@prisma/client'
 // import { absoluteUrl } from '@/lib/utils'
 // import {
 //   getUserSubscriptionPlan,
@@ -328,21 +329,53 @@ export const appRouter = router({
         nextCursor,
       }
     }),
+  
+    getFileUploadStatus: privateProcedure
+      .input(z.object({ fileId: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const file = await db.file.findFirst({
+          where: {
+            id: input.fileId,
+            userId: ctx.userId,
+          },
+        })
 
-  getFileUploadStatus: privateProcedure
-    .input(z.object({ fileId: z.string() }))
-    .query(async ({ input, ctx }) => {
-      const file = await db.file.findFirst({
-        where: {
-          id: input.fileId,
-          userId: ctx.userId,
-        },
-      })
+        if (!file) return { status: 'PENDING' as const }
+        console.log(file.uploadStatus)
+        return { status: file.uploadStatus }
+      }),
+  
+  // getFileUploadStatus: privateProcedure
+  // .input(z.object({ fileId: z.string() }))
+  // .query(async ({ input, ctx }) => {
+  //   const file = await db.file.findFirst({
+  //     where: {
+  //       id: input.fileId,
+  //       userId: ctx.userId,
+  //     },
+  //   });
 
-      if (!file) return { status: 'PENDING' as const }
+  //   if (!file) return { status: 'PENDING' as const };
 
-      return { status: file.uploadStatus }
-    }),
+  //   return { status: file.uploadStatus as 'SUCCESS' | 'FAILED' | 'PROCESSING' | 'PENDING' };
+  // }),
+
+  // export const appRouter = router({
+    // getFileUploadStatus: privateProcedure
+    //   .input(z.object({ fileId: z.string() }))
+    //   .query(async ({ input, ctx }) => {
+    //     const file = await db.file.findFirst({
+    //       where: {
+    //         id: input.fileId,
+    //         userId: ctx.userId,
+    //       },
+    //     });
+  
+    //     // Ensure that status is of type UploadStatus
+    //     return { status: file?.uploadStatus ?? UploadStatus.PENDING };
+    //   }),
+  // });
+  
 
   getFile: privateProcedure
     .input(z.object({ key: z.string() }))
@@ -361,7 +394,7 @@ export const appRouter = router({
       return file
     }),
 
-  deleteFile: privateProcedure
+    deleteFile: privateProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { userId } = ctx
